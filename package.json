@@ -5,12 +5,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "vite"
   },
   "devDependencies": {
-    "vite": "^5.0.0"
-  },
-  "dependencies": {
-    "lucide": "^0.263.0"
+    "vite": "^7.2.4"
   }
 }
