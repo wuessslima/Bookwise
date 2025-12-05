@@ -1,14 +1,16 @@
+import { libraryManager } from "../libraryManager.mjs";
+import { progressTracker } from "../progressTracker.mjs";
+
 export class UIComponents {
   // ========== BOOK CARD COMPONENT ==========
   static createBookCard(book, options = {}) {
     const {
       showActions = true,
       showDescription = false,
-      size = "medium", // 'small', 'medium', 'large'
-      onAddToLibrary = null,
-      onViewDetails = null,
-      onRemoveFromShelf = null,
+      size = "medium",
       currentShelf = null,
+      showProgress = true,
+      showSimilarButton = false, // Nova opção para mostrar botão "Similar"
     } = options;
 
     const sizeClasses = {
@@ -17,144 +19,142 @@ export class UIComponents {
       large: "book-card-large",
     };
 
+    const progress = progressTracker.getBookProgress(book.id);
+    const hasProgress = progress && progress.percentage > 0;
+
     return `
-            <div class="book-card ${sizeClasses[size]}" data-book-id="${
-      book.id
-    }">
-                <div class="book-cover">
-                    <img src="${
-                      book.cover?.small ||
-                      book.cover?.thumbnail ||
-                      "./src/assets/images/placeholder-cover.jpg"
-                    }" 
-                         alt="${book.title}"
-                         loading="lazy"
-                         onerror="this.src='./src/assets/images/placeholder-cover.jpg'">
-                    ${
-                      book.userRating
-                        ? `
-                        <div class="book-rating">
-                            ⭐ ${book.userRating}/5
-                        </div>
-                    `
-                        : ""
-                    }
-                </div>
-                
-                <div class="book-content">
-                    <h3 class="book-title" title="${book.title}">${
-      book.title
-    }</h3>
-                    <p class="book-author">by ${
-                      Array.isArray(book.authors)
-                        ? book.authors.join(", ")
-                        : "Unknown Author"
-                    }</p>
-                    
-                    ${
-                      showDescription && book.description
-                        ? `
-                        <p class="book-description">${this.truncateText(
-                          book.description,
-                          120
-                        )}</p>
-                    `
-                        : ""
-                    }
-                    
-                    <div class="book-meta">
-                        ${
-                          book.publishedDate
-                            ? `
-                            <span class="book-year">${book.publishedDate.substring(
-                              0,
-                              4
-                            )}</span>
-                        `
-                            : ""
-                        }
-                        ${
-                          book.pages
-                            ? `
-                            <span class="book-pages">${book.pages}p</span>
-                        `
-                            : ""
-                        }
-                        ${
-                          book.categories && book.categories.length > 0
-                            ? `
-                            <span class="book-genre">${book.categories[0]}</span>
-                        `
-                            : ""
-                        }
-                    </div>
-                    
-                    ${
-                      showActions
-                        ? `
-                        <div class="book-actions">
-                            ${
-                              onAddToLibrary
-                                ? `
-                                <button class="btn btn-primary btn-sm" onclick="${onAddToLibrary}('${book.id}')">
-                                    + Add to Library
-                                </button>
-                            `
-                                : ""
-                            }
-                            
-                            ${
-                              onViewDetails
-                                ? `
-                                <button class="btn btn-secondary btn-sm" onclick="${onViewDetails}('${book.id}')">
-                                    Details
-                                </button>
-                            `
-                                : ""
-                            }
-                            
-                            ${
-                              onRemoveFromShelf && currentShelf
-                                ? `
-                                <button class="btn btn-danger btn-sm" onclick="${onRemoveFromShelf}('${book.id}', '${currentShelf}')">
-                                    Remove
-                                </button>
-                            `
-                                : ""
-                            }
-                            
-                            ${
-                              !onAddToLibrary &&
-                              !onViewDetails &&
-                              !onRemoveFromShelf
-                                ? `
-                                <select class="shelf-select" onchange="handleShelfSelect('${book.id}', this.value)">
-                                    <option value="">Move to...</option>
-                                    <option value="want-to-read">Want to Read</option>
-                                    <option value="currently-reading">Currently Reading</option>
-                                    <option value="read">Read</option>
-                                    <option value="favorites">Favorites</option>
-                                </select>
-                            `
-                                : ""
-                            }
-                        </div>
-                    `
-                        : ""
-                    }
-                </div>
+    <div class="book-card ${sizeClasses[size]} ${
+      hasProgress ? "with-progress" : ""
+    }" 
+         data-book-id="${book.id}">
+        ${
+          hasProgress
+            ? `
+            <div class="progress-indicator">
+                ${Math.round(progress.percentage)}%
             </div>
-        `;
+        `
+            : ""
+        }
+        
+        <div class="book-cover">
+            <img src="${
+              book.cover?.small ||
+              book.cover?.thumbnail ||
+              "./src/assets/images/placeholder-cover.jpg"
+            }" 
+                 alt="${book.title}"
+                 loading="lazy"
+                 onerror="this.src='./src/assets/images/placeholder-cover.jpg'">
+        </div>
+        
+        <div class="book-content">
+            <h3 class="book-title" title="${book.title}">${book.title}</h3>
+            <p class="book-author">by ${
+              Array.isArray(book.authors)
+                ? book.authors.join(", ")
+                : "Unknown Author"
+            }</p>
+            
+            ${
+              showDescription && book.description
+                ? `
+                <p class="book-description">${this.truncateText(
+                  book.description,
+                  120
+                )}</p>
+            `
+                : ""
+            }
+            
+            <div class="book-meta">
+                ${
+                  book.publishedDate
+                    ? `
+                    <span class="book-year">${book.publishedDate.substring(
+                      0,
+                      4
+                    )}</span>
+                `
+                    : ""
+                }
+                ${
+                  book.pages
+                    ? `
+                    <span class="book-pages">${book.pages}p</span>
+                `
+                    : ""
+                }
+            </div>
+            
+            ${
+              showActions
+                ? `
+                <div class="book-actions">
+                    ${
+                      currentShelf
+                        ? `
+                        <button class="btn btn-sm btn-secondary" onclick="showProgressModal('${
+                          book.id
+                        }')">
+                            📈 Track
+                        </button>
+                        ${
+                          showSimilarButton
+                            ? `
+                        <button class="btn btn-sm btn-outline" onclick="showSimilarBooks('${book.id}')">
+                            🔍 Similar
+                        </button>
+                        `
+                            : ""
+                        }
+                        <button class="btn btn-sm btn-danger" onclick="removeBookFromShelf('${
+                          book.id
+                        }', '${currentShelf}')">
+                            Remove
+                        </button>
+                    `
+                        : `
+                        <button class="btn btn-primary btn-sm" onclick="addToLibrary('${book.id}')">
+                            + Add to Library
+                        </button>
+                    `
+                    }
+                </div>
+            `
+                : ""
+            }
+        </div>
+    </div>
+  `;
   }
 
   // ========== SHELF NAVIGATION COMPONENT ==========
   static createShelfNavigation(currentShelf = "all", onShelfChange = null) {
+    // Calcular contagens reais
+    const allBooks = Object.values(libraryManager.library.books).length;
+    const wantToRead = libraryManager.getBooksFromShelf("want-to-read").length;
+    const currentlyReading =
+      libraryManager.getBooksFromShelf("currently-reading").length;
+    const read = libraryManager.getBooksFromShelf("read").length;
+    const favorites = libraryManager.getBooksFromShelf("favorites").length;
+
     const shelves = [
-      { id: "all", name: "All Books", icon: "📚", count: 0 },
-      { id: "want-to-read", name: "Want to Read", icon: "📖", count: 0 },
-      { id: "currently-reading", name: "Reading", icon: "🔖", count: 0 },
-      { id: "read", name: "Finished", icon: "✅", count: 0 },
-      { id: "favorites", name: "Favorites", icon: "⭐", count: 0 },
+      { id: "all", name: "All Books", icon: "📚", count: allBooks },
+      {
+        id: "want-to-read",
+        name: "Want to Read",
+        icon: "📖",
+        count: wantToRead,
+      },
+      {
+        id: "currently-reading",
+        name: "Reading",
+        icon: "🔖",
+        count: currentlyReading,
+      },
+      { id: "read", name: "Finished", icon: "✅", count: read },
+      { id: "favorites", name: "Favorites", icon: "⭐", count: favorites },
     ];
 
     return `
@@ -173,7 +173,7 @@ export class UIComponents {
                                     onclick="${
                                       onShelfChange
                                         ? onShelfChange + `('${shelf.id}')`
-                                        : ""
+                                        : "handleShelfChange"
                                     }"
                                     data-shelf-id="${shelf.id}">
                                 <span class="shelf-icon">${shelf.icon}</span>
@@ -185,24 +185,12 @@ export class UIComponents {
                       )
                       .join("")}
                 </ul>
-                
-                <div class="custom-shelves-section">
-                    <div class="section-header">
-                        <h4>Custom Shelves</h4>
-                        <button class="btn btn-sm btn-outline" onclick="showCreateShelfModal()">
-                            + New
-                        </button>
-                    </div>
-                    <ul class="shelf-nav-list" id="customShelvesList">
-                        <!-- Custom shelves will be populated here -->
-                    </ul>
-                </div>
             </nav>
         `;
   }
 
   // ========== SEARCH INTERFACE COMPONENT ==========
-  static createSearchInterface(onSearch = null, onAdvancedSearch = null) {
+  static createSearchInterface(onSearch = null) {
     return `
             <div class="search-interface">
                 <div class="search-header">
@@ -222,46 +210,6 @@ export class UIComponents {
                             Search
                         </button>
                     </div>
-                    
-                    <div class="search-advanced-toggle">
-                        <button class="btn btn-link" onclick="toggleAdvancedSearch()">
-                            Advanced Search ▼
-                        </button>
-                    </div>
-                    
-                    <div class="advanced-search hidden" id="advancedSearch">
-                        <div class="search-filters">
-                            <div class="filter-group">
-                                <label for="searchGenre">Genre</label>
-                                <select id="searchGenre" class="filter-select">
-                                    <option value="">Any Genre</option>
-                                    <option value="fiction">Fiction</option>
-                                    <option value="non-fiction">Non-Fiction</option>
-                                    <option value="science-fiction">Science Fiction</option>
-                                    <option value="fantasy">Fantasy</option>
-                                    <option value="mystery">Mystery</option>
-                                    <option value="romance">Romance</option>
-                                    <option value="biography">Biography</option>
-                                </select>
-                            </div>
-                            
-                            <div class="filter-group">
-                                <label for="searchYear">Publication Year</label>
-                                <input type="number" id="searchYear" class="filter-input" placeholder="e.g., 2020" min="1900" max="2024">
-                            </div>
-                            
-                            <div class="filter-group">
-                                <label for="searchLanguage">Language</label>
-                                <select id="searchLanguage" class="filter-select">
-                                    <option value="">Any Language</option>
-                                    <option value="en">English</option>
-                                    <option value="es">Spanish</option>
-                                    <option value="fr">French</option>
-                                    <option value="pt">Portuguese</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
                 </div>
                 
                 <div class="search-quick-links">
@@ -270,16 +218,13 @@ export class UIComponents {
                         <button class="quick-link-btn" onclick="quickSearch('science fiction')">
                             🚀 Science Fiction
                         </button>
-                        <button class="quick-link-btn" onclick="quickSearch('mystery thriller')">
+                        <button class="quick-link-btn" onclick="quickSearch('mystery')">
                             🕵️ Mystery
                         </button>
                         <button class="quick-link-btn" onclick="quickSearch('romance')">
                             💖 Romance
                         </button>
-                        <button class="quick-link-btn" onclick="quickSearch('biography')">
-                            📝 Biography
-                        </button>
-                        <button class="quick-link-btn" onclick="quickSearch('javascript programming')">
+                        <button class="quick-link-btn" onclick="quickSearch('javascript')">
                             💻 Programming
                         </button>
                     </div>
@@ -291,7 +236,7 @@ export class UIComponents {
   // ========== BOOKS GRID COMPONENT ==========
   static createBooksGrid(books, options = {}) {
     const {
-      gridLayout = "auto", // 'auto', 'compact', 'detailed'
+      gridLayout = "auto",
       emptyMessage = "No books found",
       showShelfActions = false,
       currentShelf = null,
@@ -310,22 +255,179 @@ export class UIComponents {
     }
 
     return `
-            <div class="${gridClass}">
-                ${books
-                  .map((book) =>
-                    this.createBookCard(book, {
-                      showActions: true,
-                      showDescription: gridLayout === "detailed",
-                      size: gridLayout === "compact" ? "small" : "medium",
-                      onRemoveFromShelf: showShelfActions
-                        ? "removeBookFromShelf"
-                        : null,
-                      currentShelf: currentShelf,
-                    })
-                  )
-                  .join("")}
+    <div class="${gridClass}">
+        ${books
+          .map((book) =>
+            this.createBookCard(book, {
+              showActions: true,
+              showDescription: gridLayout === "detailed",
+              size: gridLayout === "compact" ? "small" : "medium",
+              currentShelf: currentShelf,
+              showProgress: true,
+              showSimilarButton: currentShelf !== null, // Mostrar botão similar apenas na biblioteca
+            })
+          )
+          .join("")}
+    </div>
+`;
+  }
+
+  // ========== PROGRESS TRACKING COMPONENTS ==========
+  static createProgressTracker(book, progress, options = {}) {
+    const { showSessionControls = true } = options;
+
+    const percentage = Math.round(progress.percentage);
+    const remainingPages = progress.totalPages - progress.currentPage;
+
+    return `
+            <div class="progress-tracker" data-book-id="${book.id}">
+                <div class="progress-header">
+                    <h3>Reading Progress</h3>
+                    ${
+                      progress.isCompleted
+                        ? '<span class="badge badge-success">Completed</span>'
+                        : '<span class="badge badge-warning">In Progress</span>'
+                    }
+                </div>
+                
+                <div class="progress-main">
+                    <!-- Progress Bar -->
+                    <div class="progress-bar-container">
+                        <div class="progress-info">
+                            <span class="current-page">${
+                              progress.currentPage
+                            }</span>
+                            <span class="total-pages">/ ${
+                              progress.totalPages
+                            } pages</span>
+                            <span class="percentage">${percentage}%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${percentage}%"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Controls -->
+                    <div class="progress-quick-controls">
+                        <button class="btn btn-sm btn-outline" onclick="updateProgressByPages('${
+                          book.id
+                        }', -10)">
+                            -10
+                        </button>
+                        <button class="btn btn-sm btn-outline" onclick="updateProgressByPages('${
+                          book.id
+                        }', 10)">
+                            +10
+                        </button>
+                        <button class="btn btn-sm btn-primary" onclick="markAsRead('${
+                          book.id
+                        }')">
+                            Mark as Read
+                        </button>
+                    </div>
+                    
+                    <!-- Detailed Controls -->
+                    <div class="progress-details">
+                        <div class="progress-input-group">
+                            <label for="currentPage_${
+                              book.id
+                            }">Current Page:</label>
+                            <input type="number" 
+                                   id="currentPage_${book.id}" 
+                                   value="${progress.currentPage}"
+                                   min="0" 
+                                   max="${progress.totalPages}"
+                                   onchange="updatePageProgress('${
+                                     book.id
+                                   }', this.value)">
+                        </div>
+                        
+                        <div class="progress-stats">
+                            <div class="stat-item">
+                                <span class="stat-label">Remaining:</span>
+                                <span class="stat-value">${remainingPages} pages</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Sessions:</span>
+                                <span class="stat-value">${
+                                  progress.readingSessions.length
+                                }</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         `;
+  }
+
+  static createReadingStats(stats, options = {}) {
+    const { showGoals = true } = options;
+
+    return `
+            <div class="reading-stats">
+                <div class="stats-header">
+                    <h3>📊 Reading Statistics</h3>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value">${stats.totalBooksTracked}</div>
+                        <div class="stat-label">Books Tracked</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${stats.completedBooks}</div>
+                        <div class="stat-label">Completed</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${stats.inProgressBooks}</div>
+                        <div class="stat-label">In Progress</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${stats.totalPagesRead}</div>
+                        <div class="stat-label">Pages Read</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${Math.round(
+                          stats.totalReadingTime / 60
+                        )}</div>
+                        <div class="stat-label">Hours Read</div>
+                    </div>
+                    <div class="stat-card streak-card">
+                        <div class="stat-value">${stats.readingStreak} 🔥</div>
+                        <div class="stat-label">Day Streak</div>
+                    </div>
+                </div>
+            </div>
+        `;
+  }
+
+  static createProgressModal(book, progress) {
+    const modalContent = `
+            <div class="progress-modal-content">
+                <div class="book-header">
+                    <img src="${
+                      book.cover?.small ||
+                      "./src/assets/images/placeholder-cover.jpg"
+                    }" 
+                         alt="${book.title}"
+                         class="book-cover-small">
+                    <div class="book-info">
+                        <h3>${book.title}</h3>
+                        <p>by ${
+                          book.authors?.join(", ") || "Unknown Author"
+                        }</p>
+                    </div>
+                </div>
+                
+                ${this.createProgressTracker(book, progress, {
+                  showSessionControls: true,
+                })}
+            </div>
+        `;
+
+    return this.createModal(`Track Progress: ${book.title}`, modalContent, {
+      size: "medium",
+    });
   }
 
   // ========== LOADING COMPONENT ==========
@@ -360,45 +462,23 @@ export class UIComponents {
 
   // ========== MODAL COMPONENT ==========
   static createModal(title, content, options = {}) {
-    const {
-      size = "medium", // 'small', 'medium', 'large', 'fullscreen'
-      onClose = null,
-      showHeader = true,
-      showFooter = false,
-      footerContent = "",
-    } = options;
+    const { size = "medium", onClose = null } = options;
 
     const modal = document.createElement("div");
     modal.className = `modal modal-${size}`;
     modal.innerHTML = `
             <div class="modal-overlay" onclick="UIComponents.closeModal(this.parentElement)"></div>
             <div class="modal-dialog">
-                ${
-                  showHeader
-                    ? `
-                    <div class="modal-header">
-                        <h2>${title}</h2>
-                        <button class="modal-close" onclick="UIComponents.closeModal(this.closest('.modal'))">
-                            &times;
-                        </button>
-                    </div>
-                `
-                    : ""
-                }
+                <div class="modal-header">
+                    <h2>${title}</h2>
+                    <button class="modal-close" onclick="UIComponents.closeModal(this.closest('.modal'))">
+                        &times;
+                    </button>
+                </div>
                 
                 <div class="modal-body">
                     ${content}
                 </div>
-                
-                ${
-                  showFooter
-                    ? `
-                    <div class="modal-footer">
-                        ${footerContent}
-                    </div>
-                `
-                    : ""
-                }
             </div>
         `;
 
@@ -432,44 +512,344 @@ export class UIComponents {
   }
 }
 
-// ========== GLOBAL FUNCTIONS FOR TEMPLATES ==========
+// uiComponents.mjs - Adicionar estas funções
+
+export class SearchFiltersUI {
+  constructor(searchEngine) {
+    this.engine = searchEngine;
+    this.currentFilters = {};
+  }
+
+  renderFilters(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    container.innerHTML = `
+      <div class="filters-container">
+        <div class="filters-header">
+          <h3>🔍 Advanced Filters</h3>
+          <button class="clear-filters-btn">Clear All</button>
+        </div>
+
+        <!-- Search Query -->
+        <div class="filter-group">
+          <label>Search Query</label>
+          <input type="text" id="search-query" 
+                 placeholder="Title, author, keyword..." 
+                 class="search-input">
+        </div>
+
+        <!-- Genre Filter -->
+        <div class="filter-group">
+          <label>Genre</label>
+          <select id="genre-filter" class="filter-select">
+            <option value="">All Genres</option>
+            ${this.engine
+              .getGenres()
+              .map((genre) => `<option value="${genre}">${genre}</option>`)
+              .join("")}
+          </select>
+        </div>
+
+        <!-- Author Filter -->
+        <div class="filter-group">
+          <label>Author</label>
+          <input type="text" id="author-filter" 
+                 placeholder="Filter by author..." 
+                 class="filter-input">
+        </div>
+
+        <!-- Year Range -->
+        <div class="filter-group">
+          <label>Publication Year</label>
+          <div class="year-range">
+            <input type="number" id="year-from" 
+                   placeholder="From" min="1800" 
+                   max="${new Date().getFullYear()}" 
+                   class="year-input">
+            <span>to</span>
+            <input type="number" id="year-to" 
+                   placeholder="To" min="1800" 
+                   max="${new Date().getFullYear()}" 
+                   class="year-input">
+          </div>
+        </div>
+
+        <!-- Language -->
+        <div class="filter-group">
+          <label>Language</label>
+          <select id="language-filter" class="filter-select">
+            <option value="all">All Languages</option>
+            <option value="en">English</option>
+            <option value="pt">Portuguese</option>
+            <option value="es">Spanish</option>
+            <option value="fr">French</option>
+          </select>
+        </div>
+
+        <!-- Sort Options -->
+        <div class="filter-group">
+          <label>Sort By</label>
+          <select id="sort-filter" class="filter-select">
+            <option value="relevance">Relevance</option>
+            <option value="newest">Newest</option>
+          </select>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="filter-actions">
+          <button id="apply-filters" class="apply-btn">Apply Filters</button>
+          <button id="reset-filters" class="reset-btn">Reset</button>
+        </div>
+      </div>
+    `;
+
+    this.attachEvents();
+  }
+
+  attachEvents() {
+    // Apply Filters
+    document.getElementById("apply-filters").addEventListener("click", () => {
+      this.collectFilters();
+      this.onApplyFilters(this.currentFilters);
+    });
+
+    // Clear All
+    document
+      .querySelector(".clear-filters-btn")
+      .addEventListener("click", () => {
+        this.clearFilters();
+        this.onClearFilters();
+      });
+
+    // Reset
+    document.getElementById("reset-filters").addEventListener("click", () => {
+      this.clearFilters();
+      this.onClearFilters();
+    });
+
+    // Auto-search on Enter in query
+    document
+      .getElementById("search-query")
+      .addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+          this.collectFilters();
+          this.onApplyFilters(this.currentFilters);
+        }
+      });
+  }
+
+  collectFilters() {
+    this.currentFilters = {
+      query: document.getElementById("search-query").value,
+      genre: document.getElementById("genre-filter").value,
+      author: document.getElementById("author-filter").value,
+      yearFrom: document.getElementById("year-from").value,
+      yearTo: document.getElementById("year-to").value,
+      language: document.getElementById("language-filter").value,
+      orderBy: document.getElementById("sort-filter").value,
+    };
+  }
+
+  clearFilters() {
+    document.getElementById("search-query").value = "";
+    document.getElementById("genre-filter").value = "";
+    document.getElementById("author-filter").value = "";
+    document.getElementById("year-from").value = "";
+    document.getElementById("year-to").value = "";
+    document.getElementById("language-filter").value = "all";
+    document.getElementById("sort-filter").value = "relevance";
+
+    this.currentFilters = {};
+  }
+
+  // Callbacks (serão definidos externamente)
+  onApplyFilters(filters) {
+    console.log("Filters applied:", filters);
+  }
+
+  onClearFilters() {
+    console.log("Filters cleared");
+  }
+}
+
+// Continuando em uiComponents.mjs
+
+export class PaginationUI {
+  constructor(searchEngine) {
+    this.engine = searchEngine;
+    this.currentPage = 0;
+    this.totalPages = 0;
+  }
+
+  render(containerId, totalItems, currentPage, itemsPerPage = 20) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    this.currentPage = currentPage;
+    this.totalPages = Math.ceil(totalItems / itemsPerPage);
+
+    if (this.totalPages <= 1) {
+      container.innerHTML = "";
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="pagination">
+        <!-- Page Info -->
+        <div class="page-info">
+          Page ${currentPage + 1} of ${this.totalPages}
+          <span class="results-count">(${totalItems} results)</span>
+        </div>
+
+        <!-- Controls -->
+        <div class="pagination-controls">
+          <!-- First Page -->
+          <button class="pagination-btn ${currentPage === 0 ? "disabled" : ""}" 
+                  data-page="0" ${currentPage === 0 ? "disabled" : ""}>
+            ⏮ First
+          </button>
+
+          <!-- Previous -->
+          <button class="pagination-btn ${currentPage === 0 ? "disabled" : ""}" 
+                  data-page="${currentPage - 1}" ${
+      currentPage === 0 ? "disabled" : ""
+    }>
+            ◀ Previous
+          </button>
+
+          <!-- Page Numbers -->
+          <div class="page-numbers">
+            ${this.generatePageNumbers(currentPage, this.totalPages)}
+          </div>
+
+          <!-- Next -->
+          <button class="pagination-btn ${
+            currentPage >= this.totalPages - 1 ? "disabled" : ""
+          }" 
+                  data-page="${currentPage + 1}" ${
+      currentPage >= this.totalPages - 1 ? "disabled" : ""
+    }>
+            Next ▶
+          </button>
+
+          <!-- Last Page -->
+          <button class="pagination-btn ${
+            currentPage >= this.totalPages - 1 ? "disabled" : ""
+          }" 
+                  data-page="${this.totalPages - 1}" ${
+      currentPage >= this.totalPages - 1 ? "disabled" : ""
+    }>
+            Last ⏭
+          </button>
+        </div>
+
+        <!-- Items Per Page -->
+        <div class="items-per-page">
+          <label>Show:</label>
+          <select class="per-page-select">
+            <option value="10" ${
+              itemsPerPage === 10 ? "selected" : ""
+            }>10</option>
+            <option value="20" ${
+              itemsPerPage === 20 ? "selected" : ""
+            }>20</option>
+            <option value="50" ${
+              itemsPerPage === 50 ? "selected" : ""
+            }>50</option>
+          </select>
+          <span>per page</span>
+        </div>
+      </div>
+    `;
+
+    this.attachEvents();
+  }
+
+  generatePageNumbers(currentPage, totalPages) {
+    let pages = [];
+
+    // Sempre mostrar primeira página
+    if (currentPage > 2) pages.push(1);
+    if (currentPage > 3) pages.push("...");
+
+    // Páginas ao redor da atual
+    for (
+      let i = Math.max(1, currentPage - 1);
+      i <= Math.min(totalPages, currentPage + 3);
+      i++
+    ) {
+      if (i > 0 && i <= totalPages) pages.push(i);
+    }
+
+    // Sempre mostrar última página
+    if (currentPage < totalPages - 3) pages.push("...");
+    if (currentPage < totalPages - 2) pages.push(totalPages);
+
+    return pages
+      .map((page) => {
+        if (page === "...") {
+          return '<span class="ellipsis">...</span>';
+        }
+
+        const isActive = page === currentPage + 1;
+        return `
+        <button class="page-number ${isActive ? "active" : ""}" 
+                data-page="${page - 1}">
+          ${page}
+        </button>
+      `;
+      })
+      .join("");
+  }
+
+  attachEvents() {
+    // Page buttons
+    document
+      .querySelectorAll(".pagination-btn, .page-number")
+      .forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          if (e.target.classList.contains("disabled")) return;
+
+          const page = parseInt(e.target.dataset.page);
+          if (!isNaN(page)) {
+            this.onPageChange(page);
+          }
+        });
+      });
+
+    // Items per page
+    document
+      .querySelector(".per-page-select")
+      ?.addEventListener("change", (e) => {
+        this.onItemsPerPageChange(parseInt(e.target.value));
+      });
+  }
+
+  // Callbacks
+  onPageChange(page) {
+    console.log("Page changed to:", page);
+  }
+
+  onItemsPerPageChange(itemsPerPage) {
+    console.log("Items per page changed to:", itemsPerPage);
+  }
+}
+
+// ========== GLOBAL UTILITY FUNCTIONS ==========
 window.debounceSearch = UIComponents.debounce(() => {
   const input = document.getElementById("mainSearchInput");
-  if (input.value.trim().length >= 2) {
-    performSearch(input.value.trim());
+  if (input && input.value.trim().length >= 2) {
+    if (window.handleSearch) {
+      window.handleSearch(input.value.trim());
+    }
   }
 }, 500);
 
-window.performSearch = function (query = null) {
+window.performSearch = function () {
   const searchInput = document.getElementById("mainSearchInput");
-  const actualQuery = query || searchInput.value.trim();
-
-  if (actualQuery) {
-    // This will be implemented in the main app
-    if (window.handleSearch) {
-      window.handleSearch(actualQuery);
-    }
-  }
-};
-
-window.quickSearch = function (query) {
-  const searchInput = document.getElementById("mainSearchInput");
-  if (searchInput) {
-    searchInput.value = query;
-    performSearch(query);
-  }
-};
-
-window.toggleAdvancedSearch = function () {
-  const advancedSearch = document.getElementById("advancedSearch");
-  if (advancedSearch) {
-    advancedSearch.classList.toggle("hidden");
-  }
-};
-
-window.handleShelfSelect = function (bookId, shelfId) {
-  if (shelfId && window.libraryManager) {
-    window.libraryManager.addBookToShelf(bookId, shelfId);
+  if (searchInput && window.handleSearch) {
+    window.handleSearch(searchInput.value.trim());
   }
 };
 
