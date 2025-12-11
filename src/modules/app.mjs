@@ -2200,8 +2200,6 @@ function collectCurrentFilters() {
 // Chamar após cada renderização
 function afterRenderEnhancements() {
   setTimeout(() => {
-    enhanceAccessibility();
-
     // Adicionar animações de entrada
     document.querySelectorAll(".book-card").forEach((card, index) => {
       card.classList.add("progressive-load");

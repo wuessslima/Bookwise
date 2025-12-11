@@ -190,7 +190,7 @@ export class ResponsiveManager {
 
   // ========== ACCESSIBILITY ENHANCEMENTS ==========
 
-  enhanceAccessibility() {
+  enhanceAccessibilityFeatures() {
     // Aumentar tamanho da fonte se preferido
     if (window.matchMedia("(prefers-contrast: high)").matches) {
       document.body.classList.add("high-contrast");
@@ -241,7 +241,7 @@ export const responsiveManager = new ResponsiveManager();
 // Inicializar otimizações
 responsiveManager.optimizeForMobile();
 responsiveManager.optimizeImages();
-responsiveManager.enhanceAccessibility();
+responsiveManager.enhanceAccessibilityFeatures();
 responsiveManager.adjustViewportForKeyboard();
 
 // Monitorar mudanças
